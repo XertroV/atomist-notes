@@ -20,6 +20,22 @@ const versionGoal = new Version().with({versioner: async (v: SdmGoalEvent) => {
 }})
 ```
 
+### DockerDeploy Goal: oddities
+
+DockerDeploy seems not to respect `displayName`
+
+make sure you have something sensible defined for `successPatterns` - otherwise DockerDeploy will hang waiting for stdout to match or the container to crash. (Maybe a timeout would be a good improvement)
+
+this goal is not really meant for production use, so it does not synchronise well with the docker daemon; as far as I can tell:
+* the "state" of docker expected by the goal is reset when the SDM is (re)started. This means:
+  * A container named `<project>_<branch>` is expected to _not_ exist when the SDM is first started (soln: `docker rm -f <project>_<branch>` before starting SDM)
+  * A _failed_ deployment for whatever reason will cause issues on subsequent runs because the code expects the container to exist (soln: restart SDM)
+  * Removing the container manually while the SDM is running will cause future deployments to fail (soln: restart SDM)
+
+### DockerBuild Goal
+
+If the Dockerfile fails to build (via `docker build .` or w/e) the DockerBuild goal will still return `0` (success)
+
 ## Team Mode
 
 (nothing yet)
