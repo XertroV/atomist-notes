@@ -19,3 +19,51 @@ const versionGoal = new Version().with({versioner: async (v: SdmGoalEvent) => {
     return v.sha
 }})
 ```
+
+## Team Mode
+
+(nothing yet)
+
+## General
+
+### No fulfillment for X (seen in `atomist feed` in local mode; suspected general)
+
+Example error: `No fulfillment for docker-build#goalCreator.ts:39`
+
+I had this error with the "new" data-driven SDM config (instead of the "old" more imperitive/side-effects-y style).
+
+My DockerBuildGoals interface: 
+
+```typescript
+// ./lib/goals/goals.ts (based on empty-sdm seed)
+export interface DockerBuildGoals extends AllGoals {
+    dockerBuild: DockerBuild;
+    dockerVersioning: Version;
+}
+
+// ./lib/goals/goalCreator.ts
+export const DockerBuildGoalCreator: GoalCreator<DockerBuildGoals> = async sdm => {
+    return {
+        dockerVersioning: new Version(),
+        dockerBuild: new DockerBuild()
+    }
+}
+
+// ./lib/goals/goalConfigurer.ts
+export const DockerBuildGoalConfigurer: GoalConfigurer<DockerBuildGoals> = async (sdm, goals) => {
+    goals.dockerVersioning.with({versioner: async (v) => { return v.sha }});
+}
+```
+
+During my `DockerBuildGoalConfigurer` function I only call `.this()` on `goals.dockerVersioning`.
+As it happens, I needed to call `goals.dockerBuild.with(...)`; even using `{}` as the parameter fixed this issue.
+Fixed version:
+
+```typescript
+// ./lib/goals/goalConfigurer.ts
+export const DockerBuildGoalConfigurer: GoalConfigurer<DockerBuildGoals> = async (sdm, goals) => {
+    goals.dockerVersioning.with({versioner: async (v) => { return v.sha }});
+    goals.dockerBuild.with({ push: false })
+}
+```
+
