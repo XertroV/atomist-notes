@@ -82,4 +82,18 @@ export const DockerBuildGoalConfigurer: GoalConfigurer<DockerBuildGoals> = async
     goals.dockerBuild.with({ push: false })
 }
 ```
+### Failed to load configuration: some/path/index.js.configuration (esp with lerna)
 
+The automation client looks for any configuration objects in all index.js files within the project directory.
+
+Particularly I had an issue with the `loadIndexConfig` function which looks for all files matching `${appRoot.path}/**/${cfgFile}` (excluding `.git` and `node_modules`).
+
+The magic `appRoot.path` thing is from a the `app-root-path` npm module which detects the app root based on that packages install location, particularly the node_modules folder ([see the package readme](https://www.npmjs.com/package/app-root-path#how-it-works-under-the-hood)).
+
+This can be problematic with lerna because the detected install location is the not the root of the SDM package, but the lerna root. This can cause problems because other index.js files are searched.
+
+In my case the solution (for _this_ issue, see below for the next issue), was to set `"nohoist": ["app-root-path"],` in `lerna.json`. Additionally, each `packages/**/package.json` has `files: ["dist"]`, and `packages/**/tsconfig.json` has `compilerOptions.outDir: "dist"`. We had different config to start with, and I standardized tsconf stuff based on <https://medium.com/@NiGhTTraX/how-to-set-up-a-typescript-monorepo-with-lerna-c6acda7d4559>
+
+#### Specific case: `SyntaxError: Unexpected token export`
+
+I had this after the above changes but before I'd cleaned up old `.(js|d.ts|js.map)` files which were causing issues. Before that I think part of the issue might have been some `package.json/files` stuff referring to `index.ts` and other ts files. That said, not entirely sure :/
